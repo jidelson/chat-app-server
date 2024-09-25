@@ -10,12 +10,20 @@ const mongoSanitize = require("express-mongo-sanitize"); //
 
 const bodyParser = require("body-parser");
 
-const xss = require("xss");
+const xssClean = require("xss-clean");
 
 const cors = require("cors");
 
 
 const app = express();
+
+app.use(express.urlencoded({
+    extended: true
+}));
+
+app.use(mongoSanitize());
+
+app.use(xssClean());
 
 app.use(cors({
     origin: "*",
@@ -44,13 +52,7 @@ const limiter = rateLimit({
 
 app.use("/tawk", limiter);
 
-// app.use(express.urlencoded({
-//     extended: true
-// }));
 
-app.use(mongoSanitize());
-
-app.use(xss());
 
 
 module.exports = app;
