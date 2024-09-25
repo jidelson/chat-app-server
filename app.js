@@ -10,6 +10,7 @@ const mongoSanitize = require("express-mongo-sanitize"); //
 
 const bodyParser = require("body-parser");
 
+const xss = require("xss");
 
 
 const app = express();
@@ -34,7 +35,11 @@ app.use("/tawk", limiter);
 
 app.use(express.urlencoded({
     extended: true
-}))
+}));
+
+app.use(mongoSanitize());
+
+app.use(xss());
 
 
 module.exports = app;
