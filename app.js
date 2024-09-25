@@ -12,8 +12,19 @@ const bodyParser = require("body-parser");
 
 const xss = require("xss");
 
+const cors = require("cors");
+
 
 const app = express();
+
+app.use(cors({
+    origin: "*",
+    methods: ["GET", "PATCH", "POST", "DELETE", "PUT"],
+    credentials: true
+}));
+
+
+
 
 app.use(express.json({ limit: "10kb "}));
 app.use(bodyParser.json());
@@ -33,9 +44,9 @@ const limiter = rateLimit({
 
 app.use("/tawk", limiter);
 
-app.use(express.urlencoded({
-    extended: true
-}));
+// app.use(express.urlencoded({
+//     extended: true
+// }));
 
 app.use(mongoSanitize());
 
