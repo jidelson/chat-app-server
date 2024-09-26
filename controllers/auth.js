@@ -2,35 +2,51 @@ const jwt = require("jsonwebtoken");
 
 //
 const User = require("../models/user");
+const filterObj = require("../utils/filterObj");
 
 const signToken = (userId) => jwt.sign({ userId }, process.env.JWT_SECRET);
 
 // Register New User
-exports.register = async(req, res, next) => {
-    const {firstName, lastName, email, password} = req.body;
+exports.register = async (req, res, next) => {
+  const { firstName, lastName, email, password } = req.body;
 
-    
+  const filteredBody = filterObj(
+    req.body,
+    "firstName",
+    "lastName",
+    "password",
+    "email"
+  );
 
-    // check if a verified user with given email exists
+  // check if a verified user with given email exists
 
-    const existing_user = await User.findOne({email: email});
+  const existing_user = await User.findOne({ email: email });
 
-    if(existing_user && existing_user.verified){
-        res.status(400).json({
-            status: "error",
-            message: "Email is already in use, please login."
-        })
-    }
-    else if(existing_user){
-        await User.findOneAndUpdate({email: email}, {}, );
-    }
-    else{
+  if (existing_user && existing_user.verified) {
+    res.status(400).json({
+      status: "error",
+      message: "Email is already in use, please login.",
+    });
+  } else if (existing_user) {
+    const updated_user = await User.findOneAndUpdate(
+      { email: email },
+      filteredBody,
+      { new: true, validateModifiedOnly: true }
+    );
 
-    }
+    // generate OTP and send email to user
+    req.userId = existing_user._id;
+    next();
+  } else {
+    // if user record is not available in DB
+    const new_user = await User.create(filteredBody);
 
+    // generate OTP and send email to user
+    req.userId = new_user._id;
 
-}
-
+    next();
+  }
+};
 
 exports.login = async (req, res, next) => {
   //
