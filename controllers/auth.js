@@ -1,5 +1,5 @@
 const jwt = require("jsonwebtoken");
-
+const otpGenerator = require("otp-generator");
 //
 const User = require("../models/user");
 const filterObj = require("../utils/filterObj");
@@ -46,6 +46,30 @@ exports.register = async (req, res, next) => {
 
     next();
   }
+};
+
+exports.sendOTP = async (req, res, next) => {
+  const { userId } = req;
+  const new_otp = otpGenerator.generate(6, {
+    lowerCaseAlphabets: false,
+    upperCaseAlphabets: false,
+    specialChars: false,
+  });
+
+  const otp_expiry_time = Date.now() + 10 * 60 * 1000; // 10 mins after OTP is sent
+
+  await User.findByIdAndUpdate(userId, {
+    otp: new_otp,
+    otp_expiry_time
+  });
+
+  // TODO Send Mail
+  res.status(200).json({
+    status: "success",
+    message: "OTP Sent Successfully!"
+  })
+
+
 };
 
 exports.login = async (req, res, next) => {
