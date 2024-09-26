@@ -107,7 +107,6 @@ exports.verifyOTP = async (req, res, next) => {
     message: "OTP verified successfully!",
     token,
   });
-
 };
 
 exports.login = async (req, res, next) => {
@@ -140,11 +139,41 @@ exports.login = async (req, res, next) => {
   });
 };
 
-exports.forgotPassword = async(req, res, next) => {
+exports.protect = async (req, res, next) => {};
 
-}
+exports.forgotPassword = async (req, res, next) => {
+  // 1) Get users email
+  const user = await User.findOne({ email: req.body.email });
+  if (!user) {
+    res.status(400).json({
+      status: "error",
+      message: "There is no user with given email address",
+    });
+  }
 
+  // 2) Generate the random reset token
+  const resetToken = user.createPasswordResetToken();
 
-exports.resetPassword = async(req, res, next) => {
-    
-}
+  const resetURL = `https://tawk.com/auth/reset-password/?code=${resetToken}`;
+
+  try {
+    // TODO => Send Email With Reset URL
+
+    res.status(200).json({
+      status: "success",
+      message: "Reset Password link sent to Email",
+    });
+  } catch (error) {
+    user.passwordResetToken = undefined;
+    user.passwordResetExpires = undefined;
+
+    await user.save({ validateBeforeSave: false });
+
+    res.status(500).json({
+      status: "error",
+      message: "There was an error sending the email. Please try again later",
+    });
+  }
+};
+
+exports.resetPassword = async (req, res, next) => {};
