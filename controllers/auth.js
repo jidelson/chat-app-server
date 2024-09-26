@@ -60,16 +60,45 @@ exports.sendOTP = async (req, res, next) => {
 
   await User.findByIdAndUpdate(userId, {
     otp: new_otp,
-    otp_expiry_time
+    otp_expiry_time,
   });
 
   // TODO Send Mail
   res.status(200).json({
     status: "success",
-    message: "OTP Sent Successfully!"
-  })
+    message: "OTP Sent Successfully!",
+  });
+};
 
+exports.verifyOTP = async (req, res, next) => {
+  // verify OTP and update user record accordingly
 
+  const { email, otp } = req.body;
+
+  const user = await User.findOne({
+    email,
+    otp_expiry_time: { $gt: Date.now() },
+  });
+
+  if (!user) {
+    res.status(400).json({
+      status: "error",
+      message: "Email is invalid or OTP expired",
+    });
+  }
+
+  if (!(await user.correctOTP(otp, user.otp))) {
+    res.status(400).json({
+      status: "error",
+      message: "OTP is incorrect",
+    });
+  }
+
+  // OTP is correct
+  user.verified = true;
+  user.otp = undefined;
+
+  await user.save({ new: true, validateModifiedOnly: true });
 };
 
 exports.login = async (req, res, next) => {
