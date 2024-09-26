@@ -1,5 +1,6 @@
 const jwt = require("jsonwebtoken");
 const otpGenerator = require("otp-generator");
+const crypto = require("crypto");
 //
 const User = require("../models/user");
 const filterObj = require("../utils/filterObj");
@@ -176,4 +177,38 @@ exports.forgotPassword = async (req, res, next) => {
   }
 };
 
-exports.resetPassword = async (req, res, next) => {};
+exports.resetPassword = async (req, res, next) => {
+    // 1) Get user based on token
+
+    const hashedToken = crypto.createHash("sha256").update(req.params.token).digest("hex");
+
+    const user = await User.findOne({
+        passwordResetToken: hashedToken,
+        passwordResetExpires: {$gt: Date.now()}
+    });
+
+    // 2) If token has expired or submission is out of time window
+
+    if(!user){
+        res.status(400).json({
+            status: "error",
+            message: "Token is invalid or expired"
+        });
+    }
+
+    // 3) Update user password and set resetToken & expiry to undefined
+
+    user.password = req.body.password;
+    user.passwordConfirm = req.body.passwordConfirm;
+    user.passwordResetToken = undefined;
+    user.passwordResetExpires = undefined;
+
+    await user.save();
+
+    // 4) Log in the user and send new JWT
+
+
+
+
+
+};
