@@ -207,6 +207,15 @@ exports.resetPassword = async (req, res, next) => {
 
     // 4) Log in the user and send new JWT
 
+    // TODO => send an email to user informing about password reset
+
+    const token = signTOken(userDoc._id);
+
+    res.status(200).json({
+        status: "success",
+        message: "Password reseted successfully",
+        token
+    })
 
 
 
