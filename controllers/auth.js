@@ -4,6 +4,7 @@ const crypto = require("crypto");
 //
 const User = require("../models/user");
 const filterObj = require("../utils/filterObj");
+const { promisify } = require("util");
 
 const signToken = (userId) => jwt.sign({ userId }, process.env.JWT_SECRET);
 
@@ -103,6 +104,7 @@ exports.verifyOTP = async (req, res, next) => {
 
   const token = signToken(user._id);
 
+
   res.status(200).json({
     status: "success",
     message: "OTP verified successfully!",
@@ -140,7 +142,57 @@ exports.login = async (req, res, next) => {
   });
 };
 
-exports.protect = async (req, res, next) => {};
+exports.protect = async (req, res, next) => {
+    // 1) Getting token (JWT) and check if it's there
+
+    let token;
+
+    // 'Bearer iushruh364453kjbu345bjk34
+
+    if(req.headers.authorization && req.headers.authorization.startsWith("Bearer")){
+        token = req.headers.authorization.split(" ")[1];
+
+
+
+    }
+    else if(req.cookies.jwt) {
+        token = req.cookies.jwt;
+    }
+    else{
+        req.status(400).json({
+            status: "error",
+            message: "You are not logged in! Please log in to get access."
+        });
+        return;
+    }
+
+    // 2) verification of token
+
+    const decoded = await promisify(jwt.verify)(token, process.env.JWT_SECRET);
+
+    // 3) Check if user still exists
+
+    const this_user = await User.findById(decoded.userId);
+
+    if(!this_user){
+        res.status(400).json({
+            status: "error",
+            message: "The user doesn't exist"
+        });
+    }
+
+    // 4) Check if user changed their password after token was issued
+
+    if(this_user.changedPasswordAfter(decoded.iat)){
+        res.status(400).json({
+            status: "error",
+            message: "User recently updated password! Please log in again."
+        });
+    }
+
+
+
+};
 
 exports.forgotPassword = async (req, res, next) => {
   // 1) Get users email
@@ -150,6 +202,7 @@ exports.forgotPassword = async (req, res, next) => {
       status: "error",
       message: "There is no user with given email address",
     });
+    return;
   }
 
   // 2) Generate the random reset token
@@ -194,6 +247,7 @@ exports.resetPassword = async (req, res, next) => {
             status: "error",
             message: "Token is invalid or expired"
         });
+        return;
     }
 
     // 3) Update user password and set resetToken & expiry to undefined
