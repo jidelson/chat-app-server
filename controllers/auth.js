@@ -190,6 +190,10 @@ exports.protect = async (req, res, next) => {
         });
     }
 
+    //
+    req.user = this_user;
+    next();
+
 
 
 };
@@ -252,7 +256,7 @@ exports.resetPassword = async (req, res, next) => {
 
     // 3) Update user password and set resetToken & expiry to undefined
 
-    user.password = req.body.password;
+    user.password = req.body.password; 
     user.passwordConfirm = req.body.passwordConfirm;
     user.passwordResetToken = undefined;
     user.passwordResetExpires = undefined;

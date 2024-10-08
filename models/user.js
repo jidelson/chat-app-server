@@ -32,7 +32,7 @@ const userSchema = new mongoose.Schema({
     type: String,
   },
   passwordConfirm: {
-    type: String
+    type: String,
   },
   passwordChangedAt: {
     type: Date,
@@ -72,6 +72,17 @@ userSchema.pre("save", async function (next) {
   next();
 });
 
+userSchema.pre("save", async function (next) {
+  // Only run this function if OTP is actually modified
+
+  if (!this.isModified("password")) return next();
+
+  // Hash the OTP with the cost of 12
+  this.password = await bcryptjs.hash(this.password, 12);
+
+  next();
+});
+
 userSchema.methods.correctPassword = async function (
   canditatePassword,
   userPassword
@@ -91,14 +102,14 @@ userSchema.methods.createPasswordResetToken = function () {
     .update(resetToken)
     .digest("hex");
 
-    this.passwordResetExpires = Date.now() + 10*60*1000;
+  this.passwordResetExpires = Date.now() + 10 * 60 * 1000;
 
   return resetToken;
 };
 
-userSchema.methods.changedPasswordAfter = function(timestamp){
-    return timestamp > this.passwordChangedAt;
-}
+userSchema.methods.changedPasswordAfter = function (timestamp) {
+  return timestamp < this.passwordChangedAt;
+};
 
 const User = new mongoose.model("User", userSchema);
 module.exports = User;
