@@ -194,8 +194,6 @@ exports.protect = async (req, res, next) => {
     req.user = this_user;
     next();
 
-
-
 };
 
 exports.forgotPassword = async (req, res, next) => {
