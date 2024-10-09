@@ -1,5 +1,7 @@
 const express = require("express");
 
+const routes = require("./routes/index");
+
 const morgan = require("morgan"); // HTTP request logger middleware for node.js
 
 const rateLimit = require("express-rate-limit");
@@ -52,7 +54,7 @@ const limiter = rateLimit({
 
 app.use("/tawk", limiter);
 
-
+app.use(routes);
 
 
 module.exports = app;
