@@ -15,7 +15,7 @@ const server = http.createServer(app);
 const DB = process.env.DBURI.replace("<PASSWORD>", process.env.DBPASSWORD);
 
 mongoose
-  .connect(DBURI, {
+  .connect(DB, {
     useNewUrlParser: true,
     useCreateIndex: true,
     useFindAndModify: false,
@@ -32,7 +32,7 @@ mongoose
 const port = process.env.PORT || 8000;
 
 server.listen(port, () => {
-  console.log(`App running on port ${port}`);
+  console.log(`App running on port ${port} ...`);
 });
 
 process.on("unhandledRejection", (err) => {
