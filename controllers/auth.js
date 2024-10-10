@@ -74,9 +74,7 @@ exports.sendOTP = async (req, res, next) => {
     to: "example@gmail.com",
     subject: "OTP for Tawk", // Tawk is name of app
     text: `Your OTP is ${new_otp}. This is valid for 10 minutes.`,
-
   });
-
 
   res.status(200).json({
     status: "success",
@@ -116,7 +114,6 @@ exports.verifyOTP = async (req, res, next) => {
 
   const token = signToken(user._id);
 
-
   res.status(200).json({
     status: "success",
     message: "OTP verified successfully!",
@@ -155,57 +152,54 @@ exports.login = async (req, res, next) => {
 };
 
 exports.protect = async (req, res, next) => {
-    // 1) Getting token (JWT) and check if it's there
+  // 1) Getting token (JWT) and check if it's there
 
-    let token;
+  let token;
 
-    // 'Bearer iushruh364453kjbu345bjk34
+  // 'Bearer iushruh364453kjbu345bjk34
 
-    if(req.headers.authorization && req.headers.authorization.startsWith("Bearer")){
-        token = req.headers.authorization.split(" ")[1];
+  if (
+    req.headers.authorization &&
+    req.headers.authorization.startsWith("Bearer")
+  ) {
+    token = req.headers.authorization.split(" ")[1];
+  } else if (req.cookies.jwt) {
+    token = req.cookies.jwt;
+  } else {
+    req.status(400).json({
+      status: "error",
+      message: "You are not logged in! Please log in to get access.",
+    });
+    return;
+  }
 
+  // 2) verification of token
 
+  const decoded = await promisify(jwt.verify)(token, process.env.JWT_SECRET);
 
-    }
-    else if(req.cookies.jwt) {
-        token = req.cookies.jwt;
-    }
-    else{
-        req.status(400).json({
-            status: "error",
-            message: "You are not logged in! Please log in to get access."
-        });
-        return;
-    }
+  // 3) Check if user still exists
 
-    // 2) verification of token
+  const this_user = await User.findById(decoded.userId);
 
-    const decoded = await promisify(jwt.verify)(token, process.env.JWT_SECRET);
+  if (!this_user) {
+    res.status(400).json({
+      status: "error",
+      message: "The user doesn't exist",
+    });
+  }
 
-    // 3) Check if user still exists
+  // 4) Check if user changed their password after token was issued
 
-    const this_user = await User.findById(decoded.userId);
+  if (this_user.changedPasswordAfter(decoded.iat)) {
+    res.status(400).json({
+      status: "error",
+      message: "User recently updated password! Please log in again.",
+    });
+  }
 
-    if(!this_user){
-        res.status(400).json({
-            status: "error",
-            message: "The user doesn't exist"
-        });
-    }
-
-    // 4) Check if user changed their password after token was issued
-
-    if(this_user.changedPasswordAfter(decoded.iat)){
-        res.status(400).json({
-            status: "error",
-            message: "User recently updated password! Please log in again."
-        });
-    }
-
-    //
-    req.user = this_user;
-    next();
-
+  //
+  req.user = this_user;
+  next();
 };
 
 exports.forgotPassword = async (req, res, next) => {
@@ -245,47 +239,46 @@ exports.forgotPassword = async (req, res, next) => {
 };
 
 exports.resetPassword = async (req, res, next) => {
-    // 1) Get user based on token
+  // 1) Get user based on token
 
-    const hashedToken = crypto.createHash("sha256").update(req.params.token).digest("hex");
+  const hashedToken = crypto
+    .createHash("sha256")
+    .update(req.params.token)
+    .digest("hex");
 
-    const user = await User.findOne({
-        passwordResetToken: hashedToken,
-        passwordResetExpires: {$gt: Date.now()}
+  const user = await User.findOne({
+    passwordResetToken: hashedToken,
+    passwordResetExpires: { $gt: Date.now() },
+  });
+
+  // 2) If token has expired or submission is out of time window
+
+  if (!user) {
+    res.status(400).json({
+      status: "error",
+      message: "Token is invalid or expired",
     });
+    return;
+  }
 
-    // 2) If token has expired or submission is out of time window
+  // 3) Update user password and set resetToken & expiry to undefined
 
-    if(!user){
-        res.status(400).json({
-            status: "error",
-            message: "Token is invalid or expired"
-        });
-        return;
-    }
+  user.password = req.body.password;
+  user.passwordConfirm = req.body.passwordConfirm;
+  user.passwordResetToken = undefined;
+  user.passwordResetExpires = undefined;
 
-    // 3) Update user password and set resetToken & expiry to undefined
+  await user.save();
 
-    user.password = req.body.password; 
-    user.passwordConfirm = req.body.passwordConfirm;
-    user.passwordResetToken = undefined;
-    user.passwordResetExpires = undefined;
+  // 4) Log in the user and send new JWT
 
-    await user.save();
+  // TODO => send an email to user informing about password reset
 
-    // 4) Log in the user and send new JWT
+  const token = signTOken(userDoc._id);
 
-    // TODO => send an email to user informing about password reset
-
-    const token = signTOken(userDoc._id);
-
-    res.status(200).json({
-        status: "success",
-        message: "Password reseted successfully",
-        token
-    })
-
-
-
-
+  res.status(200).json({
+    status: "success",
+    message: "Password reseted successfully",
+    token,
+  });
 };
