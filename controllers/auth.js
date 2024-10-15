@@ -1,7 +1,7 @@
 const jwt = require("jsonwebtoken");
 const otpGenerator = require("otp-generator");
 const crypto = require("crypto");
-//
+// comment for gh test
 
 const mailService = require("../services/mailer");
 const User = require("../models/user");
