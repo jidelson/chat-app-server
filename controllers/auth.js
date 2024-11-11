@@ -27,16 +27,16 @@ exports.register = async (req, res, next) => {
   const existing_user = await User.findOne({ email: email });
 
   if (existing_user && existing_user.verified) {
+
     res.status(400).json({
       status: "error",
       message: "Email is already in use, please login.",
     });
   } else if (existing_user) {
-    const updated_user = await User.findOneAndUpdate(
-      { email: email },
-      filteredBody,
-      { new: true, validateModifiedOnly: true }
-    );
+      await User.findOneAndUpdate({ email: email }, filteredBody, { 
+        new: true, 
+        validateModifiedOnly: true 
+      });
 
     // generate OTP and send email to user
     req.userId = existing_user._id;
@@ -47,7 +47,6 @@ exports.register = async (req, res, next) => {
 
     // generate OTP and send email to user
     req.userId = new_user._id;
-
     next();
   }
 };
@@ -55,25 +54,30 @@ exports.register = async (req, res, next) => {
 exports.sendOTP = async (req, res, next) => {
   const { userId } = req;
   const new_otp = otpGenerator.generate(6, {
-    lowerCaseAlphabets: false,
     upperCaseAlphabets: false,
     specialChars: false,
+    lowerCaseAlphabets: false,
   });
 
   const otp_expiry_time = Date.now() + 10 * 60 * 1000; // 10 mins after OTP is sent
 
-  await User.findByIdAndUpdate(userId, {
-    otp: new_otp,
-    otp_expiry_time,
+ const user = await User.findByIdAndUpdate(userId, {
+    otp_expiry_time: otp_expiry_time
   });
+
+  user.otp = new_otp.toString();
+
+  await user.save({ new: true, validateModifiedOnly: true });
 
   // TODO Send Mail
 
   mailService.sendEmail({
     from: "contact@example.in", // CHANGE THIS EMAIL ADDRESS LATER ALSO IN mailer.js
-    to: "example@gmail.com",
-    subject: "OTP for Tawk", // Tawk is name of app
-    text: `Your OTP is ${new_otp}. This is valid for 10 minutes.`,
+    to: user.email,
+    subject: "Verification OTP",
+    html: otp(user.firstName, new_otp),
+    // text: `Your OTP is ${new_otp}. This is valid for 10 minutes.`,
+    attachments: []
   });
 
   res.status(200).json({
@@ -110,7 +114,7 @@ exports.verifyOTP = async (req, res, next) => {
   user.verified = true;
   user.otp = undefined;
 
-  await user.save({ new: true, validateModifiedOnly: true });
+  // await user.save({ new: true, validateModifiedOnly: true });
 
   const token = signToken(user._id);
 
