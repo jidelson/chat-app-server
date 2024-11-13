@@ -1,25 +1,29 @@
 const jwt = require("jsonwebtoken");
 const otpGenerator = require("otp-generator");
-const crypto = require("crypto");
-// comment for gh test
-
 const mailService = require("../services/mailer");
-const User = require("../models/user");
+const crypto = require("crypto");
+
 const filterObj = require("../utils/filterObj");
+
+// Model
+const User = require("../models/user");
+const otp = require("../Templates/Mail/otp");
+const resetPassword = require("../Templates/Mail/resetPassword");
 const { promisify } = require("util");
+const catchAsync = require("../utils/catchAsync");
 
 const signToken = (userId) => jwt.sign({ userId }, process.env.JWT_SECRET);
 
 // Register New User
-exports.register = async (req, res, next) => {
+exports.register = catchAsync(async (req, res, next) => {
   const { firstName, lastName, email, password } = req.body;
 
   const filteredBody = filterObj(
     req.body,
     "firstName",
     "lastName",
-    "password",
-    "email"
+    "email",
+    "password"
   );
 
   // check if a verified user with given email exists
@@ -49,9 +53,9 @@ exports.register = async (req, res, next) => {
     req.userId = new_user._id;
     next();
   }
-};
+});
 
-exports.sendOTP = async (req, res, next) => {
+exports.sendOTP = catchAsync(async (req, res, next) => {
   const { userId } = req;
   const new_otp = otpGenerator.generate(6, {
     upperCaseAlphabets: false,
@@ -84,9 +88,9 @@ exports.sendOTP = async (req, res, next) => {
     status: "success",
     message: "OTP Sent Successfully!",
   });
-};
+});
 
-exports.verifyOTP = async (req, res, next) => {
+exports.verifyOTP = catchAsync(async (req, res, next) => {
   // verify OTP and update user record accordingly
 
   const { email, otp } = req.body;
@@ -103,18 +107,25 @@ exports.verifyOTP = async (req, res, next) => {
     });
   }
 
+  if(user.verified){
+    return res.status(400).json({
+      status: "error",
+      message: "Email is already verified"
+    });
+  }
+
   if (!(await user.correctOTP(otp, user.otp))) {
     res.status(400).json({
       status: "error",
       message: "OTP is incorrect",
     });
+    return;
   }
 
   // OTP is correct
   user.verified = true;
   user.otp = undefined;
-
-  // await user.save({ new: true, validateModifiedOnly: true });
+  await user.save({ new: true, validateModifiedOnly: true });
 
   const token = signToken(user._id);
 
@@ -122,12 +133,12 @@ exports.verifyOTP = async (req, res, next) => {
     status: "success",
     message: "OTP verified successfully!",
     token,
+    user_id: user._id
   });
-};
+});
 
-exports.login = async (req, res, next) => {
-  //
-
+  // User Login
+exports.login = catchAsync(async (req, res, next) => {
   const { email, password } = req.body;
 
   if (!email || !password) {
@@ -135,25 +146,36 @@ exports.login = async (req, res, next) => {
       status: "error",
       message: "Both email and password are required",
     });
+    return;
   }
 
-  const userDoc = await User.findOne({ email: email }).select("+password");
+  const user = await User.findOne({ email: email }).select("+password");
 
-  if (!userDoc || (await userDoc.correctPassword(password, userDoc.password))) {
+  if(!user || !user.password){
+    res.status(400).json({
+      status: "error",
+      message: "Incorrect password"
+    });
+    return;
+  }
+
+  if (!user || !(await user.correctPassword(password, user.password))) {
     res.status(400).json({
       status: "error",
       message: "Email or password are incorrect",
     });
+    return;
   }
 
-  const token = signToken(userDoc._id);
+  const token = signToken(user._id);
 
   res.status(200).json({
     status: "success",
     message: "Logged in successfully",
     token,
+    user_id: user._id
   });
-};
+});
 
 exports.protect = async (req, res, next) => {
   // 1) Getting token (JWT) and check if it's there
