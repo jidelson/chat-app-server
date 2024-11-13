@@ -28,7 +28,7 @@ exports.register = async (req, res, next) => {
 
   if (existing_user && existing_user.verified) {
 
-    res.status(400).json({
+    return res.status(400).json({
       status: "error",
       message: "Email is already in use, please login.",
     });
