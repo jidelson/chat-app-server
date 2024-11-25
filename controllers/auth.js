@@ -76,7 +76,7 @@ exports.sendOTP = catchAsync(async (req, res, next) => {
   // TODO Send Mail
 
   mailService.sendEmail({
-    from: "contact@example.in", // CHANGE THIS EMAIL ADDRESS LATER ALSO IN mailer.js
+    from: "joeidelson@gmail.com", // CHANGE THIS EMAIL ADDRESS LATER ALSO IN mailer.js
     to: user.email,
     subject: "Verification OTP",
     html: otp(user.firstName, new_otp),
@@ -101,7 +101,7 @@ exports.verifyOTP = catchAsync(async (req, res, next) => {
   });
 
   if (!user) {
-    res.status(400).json({
+    return res.status(400).json({
       status: "error",
       message: "Email is invalid or OTP expired",
     });
@@ -177,7 +177,7 @@ exports.login = catchAsync(async (req, res, next) => {
   });
 });
 
-exports.protect = async (req, res, next) => {
+exports.protect = catchAsync(async(req, res, next) => {
   // 1) Getting token (JWT) and check if it's there
 
   let token;
@@ -191,12 +191,12 @@ exports.protect = async (req, res, next) => {
     token = req.headers.authorization.split(" ")[1];
   } else if (req.cookies.jwt) {
     token = req.cookies.jwt;
-  } else {
-    req.status(400).json({
-      status: "error",
-      message: "You are not logged in! Please log in to get access.",
+  } 
+  
+  if(!token){
+    return res.status(401).json({
+      message: "You are not logged in! Please log in to get access."
     });
-    return;
   }
 
   // 2) verification of token
@@ -206,51 +206,57 @@ exports.protect = async (req, res, next) => {
   // 3) Check if user still exists
 
   const this_user = await User.findById(decoded.userId);
-
   if (!this_user) {
-    res.status(400).json({
-      status: "error",
-      message: "The user doesn't exist",
+    return res.status(401).json({
+      message: "The user belonging to this token does no longer exist",
     });
   }
 
   // 4) Check if user changed their password after token was issued
 
   if (this_user.changedPasswordAfter(decoded.iat)) {
-    res.status(400).json({
-      status: "error",
+    res.status(401).json({
       message: "User recently updated password! Please log in again.",
     });
   }
 
-  //
+  // GRANT ACCESS TO PROTECTED ROUTE
   req.user = this_user;
   next();
-};
+});
 
-exports.forgotPassword = async (req, res, next) => {
-  // 1) Get users email
+exports.forgotPassword = catchAsync(async (req, res, next) => {
+  // 1) Get user based on POSTed email
   const user = await User.findOne({ email: req.body.email });
   if (!user) {
-    res.status(400).json({
+    return res.status(404).json({
       status: "error",
       message: "There is no user with given email address",
     });
-    return;
   }
 
   // 2) Generate the random reset token
   const resetToken = user.createPasswordResetToken();
+  await user.save({validateBeforeSave: false})
 
-  const resetURL = `https://tawk.com/auth/reset-password/?code=${resetToken}`;
 
   try {
-    // TODO => Send Email With Reset URL
+    const resetURL = `https://tawk.com/auth/reset-password/?code=${resetToken}`;
 
-    res.status(200).json({
+    // TODO => Send Email With Reset URL
+  mailService.sendEmail({
+    from: "joeidelson@gmail.com",
+    to: user.email,
+    subject: "Reset Password",
+    html: resetPassword(user.firstName, resetURL),
+    attachments: []
+  });
+
+ res.status(200).json({
       status: "success",
       message: "Reset Password link sent to Email",
     });
+
   } catch (error) {
     user.passwordResetToken = undefined;
     user.passwordResetExpires = undefined;
@@ -262,14 +268,14 @@ exports.forgotPassword = async (req, res, next) => {
       message: "There was an error sending the email. Please try again later",
     });
   }
-};
+});
 
-exports.resetPassword = async (req, res, next) => {
+exports.resetPassword = catchAsync(async (req, res, next) => {
   // 1) Get user based on token
 
   const hashedToken = crypto
     .createHash("sha256")
-    .update(req.params.token)
+    .update(req.body.token)
     .digest("hex");
 
   const user = await User.findOne({
@@ -280,31 +286,28 @@ exports.resetPassword = async (req, res, next) => {
   // 2) If token has expired or submission is out of time window
 
   if (!user) {
-    res.status(400).json({
+    return res.status(400).json({
       status: "error",
       message: "Token is invalid or expired",
     });
-    return;
   }
-
-  // 3) Update user password and set resetToken & expiry to undefined
-
   user.password = req.body.password;
   user.passwordConfirm = req.body.passwordConfirm;
   user.passwordResetToken = undefined;
   user.passwordResetExpires = undefined;
-
   await user.save();
+
+    // 3) Update user password and set resetToken & expiry to undefined
 
   // 4) Log in the user and send new JWT
 
   // TODO => send an email to user informing about password reset
 
-  const token = signTOken(userDoc._id);
+  const token = signTOken(user._id);
 
   res.status(200).json({
     status: "success",
     message: "Password reseted successfully",
     token,
   });
-};
+});
