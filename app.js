@@ -10,7 +10,8 @@ const helmet = require("helmet"); //
 
 const mongoSanitize = require("express-mongo-sanitize"); //
 
-const bodyParser = require("body-parser");
+// commenting below from gpt
+//const bodyParser = require("body-parser");
 
 const xssClean = require("xss-clean");
 
@@ -19,9 +20,21 @@ const cors = require("cors");
 
 const app = express();
 
-app.use(express.urlencoded({
-    extended: true
-}));
+// adding this to next comment indicator from gpt
+app.use((req, res, next) => {
+    console.log(`Incoming request: ${req.method} ${req.url}`);
+    console.log(`Content-Length: ${req.headers["content-length"] || "unknown"} bytes`);
+    next();
+});
+
+app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ extended: true, limit: "10mb" }));
+//
+
+// commenting out from GPT
+// app.use(express.urlencoded({
+//     extended: true
+// }));
 
 app.use(mongoSanitize());
 
@@ -36,9 +49,10 @@ app.use(cors({
 
 
 
-app.use(express.json({ limit: "10kb "}));
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({extended: true}));
+
+//commenting 2 lines below from gpt
+//app.use(bodyParser.json());
+//app.use(bodyParser.urlencoded({extended: true}));
 
 app.use(helmet());
 

@@ -67,7 +67,8 @@ userSchema.pre("save", async function (next) {
   if (!this.isModified("otp")) return next();
 
   // Hash the OTP with the cost of 12
-  this.otp = await bcryptjs.hash(this.otp, 12);
+  //added String() from gpt
+  this.otp = await bcrypt.hash(String(this.otp), 12);
 
   next();
 });
@@ -78,7 +79,7 @@ userSchema.pre("save", async function (next) {
   if (!this.isModified("password")) return next();
 
   // Hash the OTP with the cost of 12
-  this.password = await bcryptjs.hash(this.password, 12);
+  this.password = await bcrypt.hash(this.password, 12);
 
   next();
 });
