@@ -15,18 +15,23 @@ const sendSGMail = async ({
   attachments,
 }) => {
   try {
-    const from = sender || "contact@example.in"; //CHANGE THIS EMAIL ADDRESS LATER
+    //below block gpt
+    if(!recipient){
+      throw new Error("Recipient email address is required")
+    }
+    //
+    const from = sender || "joeidelson@gmail.com"; //CHANGE THIS EMAIL ADDRESS LATER
 
     const msg = {
       to: recipient, // email of recipient
       from: from, // this will be our verified sender
       subject, //shorthand for key/value being the same
-      html: text,
+      html: html || text, //altered this line gpt added "html ||"
       text: text,
       attachments,
     };
 
-    return sgMail.send(msg);
+    return await sgMail.send(msg); //added await
   } catch (error) {
     console.log(error);
   }
@@ -34,7 +39,8 @@ const sendSGMail = async ({
 
 exports.sendEmail = async (args) => {
   if (process.env.NODE_ENV === "development") {
-    return new Promise.resolve();
+    console.log("Email not sent in development mode. Args:", args);
+    return Promise.resolve(); //removed "new" after return
   } else {
     return sendSGMail(args);
   }

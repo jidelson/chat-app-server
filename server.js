@@ -41,3 +41,5 @@ process.on("unhandledRejection", (err) => {
     process.exit(1);
   });
 });
+
+console.log('SendGrid API Key:', process.env.SG_KEY);

@@ -65,19 +65,34 @@ exports.sendOTP = catchAsync(async (req, res, next) => {
 
   const otp_expiry_time = Date.now() + 10 * 60 * 1000; // 10 mins after OTP is sent
 
- const user = await User.findByIdAndUpdate(userId, {
-    otp_expiry_time: otp_expiry_time
-  });
+//  const user = await User.findByIdAndUpdate(userId, {
+//     otp_expiry_time: otp_expiry_time
+//   });
+
+const user = await User.findById(userId);
+  if (!user) {
+    return res.status(404).json({
+      status: "error",
+      message: "User not found",
+    });
+  }
+
 
   user.otp = new_otp.toString();
 
+  user.otp_expiry_time = otp_expiry_time;
+
   await user.save({ new: true, validateModifiedOnly: true });
 
-  // TODO Send Mail
+  console.log(`Generated OTP: ${new_otp}`);
+
+  try{
+
 
   mailService.sendEmail({
     from: "joeidelson@gmail.com", // CHANGE THIS EMAIL ADDRESS LATER ALSO IN mailer.js
-    to: user.email,
+    // to: user.email,
+    recipient: user.email,
     subject: "Verification OTP",
     html: otp(user.firstName, new_otp),
     // text: `Your OTP is ${new_otp}. This is valid for 10 minutes.`,
@@ -88,6 +103,15 @@ exports.sendOTP = catchAsync(async (req, res, next) => {
     status: "success",
     message: "OTP Sent Successfully!",
   });
+} catch (error) {
+  console.error("Error sending OTP email:", error.message);
+  res.status(500).json({
+    status: "error",
+    message: "Failed to send OTP email.",
+  });
+}
+
+  
 });
 
 exports.verifyOTP = catchAsync(async (req, res, next) => {
@@ -95,9 +119,18 @@ exports.verifyOTP = catchAsync(async (req, res, next) => {
 
   const { email, otp } = req.body;
 
+  // Validate input
+  if (!email || !otp) {
+    return res.status(400).json({
+      status: "error",
+      message: "Email and OTP are required",
+    });
+  }
+
+  // Find user by email and check OTP expiry
   const user = await User.findOne({
     email,
-    otp_expiry_time: { $gt: Date.now() },
+    otp_expiry_time: { $gt: Date.now() },// Ensure OTP is not expired
   });
 
   if (!user) {
@@ -113,20 +146,20 @@ exports.verifyOTP = catchAsync(async (req, res, next) => {
       message: "Email is already verified"
     });
   }
-
+// Verify OTP
   if (!(await user.correctOTP(otp, user.otp))) {
     res.status(400).json({
       status: "error",
       message: "OTP is incorrect",
     });
-    return;
   }
 
-  // OTP is correct
+  // OTP is correct, mark user as verified
   user.verified = true;
-  user.otp = undefined;
+  user.otp = undefined; // Clear OTP
   await user.save({ new: true, validateModifiedOnly: true });
 
+  // Generate token for authenticated session
   const token = signToken(user._id);
 
   res.status(200).json({
