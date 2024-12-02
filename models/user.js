@@ -91,9 +91,21 @@ userSchema.methods.correctPassword = async function (
   return await bcrypt.compare(canditatePassword, userPassword);
 };
 
+// userSchema.methods.correctOTP = async function (canditateOTP, userOTP) {
+//   return await bcrypt.compare(canditateOTP, userOTP);
+// };
+
 userSchema.methods.correctOTP = async function (canditateOTP, userOTP) {
+  console.log("canditateOTP:", canditateOTP, "Type:", typeof canditateOTP);
+  console.log("userOTP:", userOTP, "Type:", typeof userOTP);
+
+  if (typeof canditateOTP !== "string" || typeof userOTP !== "string") {
+    throw new Error("Arguments for bcrypt.compare must be strings");
+  }
+
   return await bcrypt.compare(canditateOTP, userOTP);
 };
+
 
 userSchema.methods.createPasswordResetToken = function () {
   const resetToken = crypto.randomBytes(32).toString("hex");

@@ -76,6 +76,9 @@ const user = await User.findById(userId);
       message: "User not found",
     });
   }
+  console.log("Fetched User:", user); // Logs the entire user object
+console.log("User email:", user?.email); // Specifically logs the email
+
 
 
   user.otp = new_otp.toString();
@@ -89,15 +92,26 @@ const user = await User.findById(userId);
   try{
 
 
+  // mailService.sendEmail({
+  //   from: "joeidelson@gmail.com", // CHANGE THIS EMAIL ADDRESS LATER ALSO IN mailer.js
+  //   // to: user.email,
+  //   recipient: user.email,
+  //   subject: "Verification OTP",
+  //   html: otp(user.firstName, new_otp),
+  //   // text: `Your OTP is ${new_otp}. This is valid for 10 minutes.`,
+  //   attachments: []
+  // });
+
+
   mailService.sendEmail({
-    from: "joeidelson@gmail.com", // CHANGE THIS EMAIL ADDRESS LATER ALSO IN mailer.js
-    // to: user.email,
-    recipient: user.email,
+    to: user.email, // Correct field for the recipient's email
+    from: "joeidelson@gmail.com", // Your verified sender email
     subject: "Verification OTP",
     html: otp(user.firstName, new_otp),
     // text: `Your OTP is ${new_otp}. This is valid for 10 minutes.`,
-    attachments: []
+    attachments: [], // Optional: Only include this if needed
   });
+  
 
   res.status(200).json({
     status: "success",
@@ -126,6 +140,8 @@ exports.verifyOTP = catchAsync(async (req, res, next) => {
       message: "Email and OTP are required",
     });
   }
+
+  const otpString = otp.toString();
 
   // Find user by email and check OTP expiry
   const user = await User.findOne({
