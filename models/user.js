@@ -54,7 +54,9 @@ const userSchema = new mongoose.Schema({
     default: false,
   },
   otp: {
-    type: Number,
+    // type: Number,
+    type: String,
+    default: undefined, // Optional: Sets the field to `undefined` when not in use
   },
   otp_expiry_time: {
     type: Date,
@@ -98,13 +100,9 @@ userSchema.methods.correctPassword = async function (
 userSchema.methods.correctOTP = async function (canditateOTP, userOTP) {
   console.log("canditateOTP:", canditateOTP, "Type:", typeof canditateOTP);
   console.log("userOTP:", userOTP, "Type:", typeof userOTP);
-
-  if (typeof canditateOTP !== "string" || typeof userOTP !== "string") {
-    throw new Error("Arguments for bcrypt.compare must be strings");
-  }
-
-  return await bcrypt.compare(canditateOTP, userOTP);
+  return await bcrypt.compare(canditateOTP, userOTP.toString());
 };
+
 
 
 userSchema.methods.createPasswordResetToken = function () {
