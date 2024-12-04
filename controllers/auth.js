@@ -338,6 +338,8 @@ exports.forgotPassword = catchAsync(async (req, res, next) => {
   try {
     const resetURL = `https://tawk.com/auth/reset-password/?code=${resetToken}`;
 
+    console.log(resetToken); 
+
     // TODO => Send Email With Reset URL
   mailService.sendEmail({
     from: "joeidelson@gmail.com",
