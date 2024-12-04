@@ -2,6 +2,7 @@ const jwt = require("jsonwebtoken");
 const otpGenerator = require("otp-generator");
 const mailService = require("../services/mailer");
 const crypto = require("crypto");
+const bcrypt = require("bcryptjs");
 
 const filterObj = require("../utils/filterObj");
 
@@ -26,27 +27,47 @@ exports.register = catchAsync(async (req, res, next) => {
     "password"
   );
 
-  // check if a verified user with given email exists
+    // Hash the password before saving or updating
+    if (password) {
+      filteredBody.password = await bcrypt.hash(password, 12);
+    }
 
+// Debug: Log plain password before hashing
+if (password) {
+  console.log("Plain password before hashing:", password); // Logs the plain password
+  filteredBody.password = await bcrypt.hash(password, 12);
+  console.log("Hashed password:", filteredBody.password); // Logs the hashed password
+}
+
+  // check if a verified user with given email exists
   const existing_user = await User.findOne({ email: email });
 
   if (existing_user && existing_user.verified) {
-
     return res.status(400).json({
       status: "error",
       message: "Email is already in use, please login.",
     });
   } else if (existing_user) {
-      await User.findOneAndUpdate({ email: email }, filteredBody, { 
-        new: true, 
-        validateModifiedOnly: true 
-      });
+      // await User.findOneAndUpdate({ email: email }, filteredBody, { 
+      //   new: true, 
+      //   validateModifiedOnly: true 
+      // });
+
+       // Update the user if they already exist but are not verified
+      const updatedUser = await User.findOneAndUpdate(
+        { email: email },
+        filteredBody,
+        {
+          new: true,
+          validateModifiedOnly: true,
+        }
+      );
 
     // generate OTP and send email to user
     req.userId = existing_user._id;
     next();
   } else {
-    // if user record is not available in DB
+    // Create a new user if they don't already exist
     const new_user = await User.create(filteredBody);
 
     // generate OTP and send email to user
@@ -217,6 +238,11 @@ exports.login = catchAsync(async (req, res, next) => {
   //   });
   //   return;
   // }
+
+  console.log("Entered password (candidatePassword):", password);
+console.log("Stored hashed password (userPassword):", user.password);
+console.log("Comparison result:", await bcrypt.compare(password, user.password));
+
 
   if (!user || !(await user.correctPassword(password, user.password))) {
     return res.status(400).json({
