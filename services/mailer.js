@@ -9,7 +9,8 @@ sgMail.setApiKey(process.env.SG_KEY);
 
 const sendSGMail = async ({ to, from, subject, text, html, attachments }) => {
   try {
-    console.log("SendGrid Payload:", { to, from, subject, text, html, attachments }); // Log payload
+    // for debugging register functionality, uncomment below
+    // console.log("SendGrid Payload:", { to, from, subject, text, html, attachments }); // Log payload
 
     if (!to) {
       throw new Error("Recipient email address is required");
