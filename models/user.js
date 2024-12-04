@@ -86,30 +86,15 @@ userSchema.pre("save", async function (next) {
   next();
 });
 
-
-// userSchema.methods.correctPassword = async function (
-//   canditatePassword,
-//   userPassword
-// ) {
-//   return await bcrypt.compare(canditatePassword, userPassword);
-// };
 userSchema.methods.correctPassword = async function (candidatePassword, userPassword) {
   return await bcrypt.compare(candidatePassword, userPassword);
 };
-
-
-
-// userSchema.methods.correctOTP = async function (canditateOTP, userOTP) {
-//   return await bcrypt.compare(canditateOTP, userOTP);
-// };
 
 userSchema.methods.correctOTP = async function (canditateOTP, userOTP) {
   console.log("canditateOTP:", canditateOTP, "Type:", typeof canditateOTP);
   console.log("userOTP:", userOTP, "Type:", typeof userOTP);
   return await bcrypt.compare(canditateOTP, userOTP.toString());
 };
-
-
 
 userSchema.methods.createPasswordResetToken = function () {
   const resetToken = crypto.randomBytes(32).toString("hex");

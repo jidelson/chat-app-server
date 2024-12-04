@@ -48,11 +48,6 @@ exports.register = catchAsync(async (req, res, next) => {
       message: "Email is already in use, please login.",
     });
   } else if (existing_user) {
-    // await User.findOneAndUpdate({ email: email }, filteredBody, {
-    //   new: true,
-    //   validateModifiedOnly: true
-    // });
-
     // Update the user if they already exist but are not verified
     const updatedUser = await User.findOneAndUpdate(
       { email: email },
@@ -86,10 +81,6 @@ exports.sendOTP = catchAsync(async (req, res, next) => {
 
   const otp_expiry_time = Date.now() + 10 * 60 * 1000; // 10 mins after OTP is sent
 
-  //  const user = await User.findByIdAndUpdate(userId, {
-  //     otp_expiry_time: otp_expiry_time
-  //   });
-
   const user = await User.findById(userId);
   if (!user) {
     return res.status(404).json({
@@ -109,16 +100,6 @@ exports.sendOTP = catchAsync(async (req, res, next) => {
   console.log(`Generated OTP: ${new_otp}`);
 
   try {
-    // mailService.sendEmail({
-    //   from: "joeidelson@gmail.com", // CHANGE THIS EMAIL ADDRESS LATER ALSO IN mailer.js
-    //   // to: user.email,
-    //   recipient: user.email,
-    //   subject: "Verification OTP",
-    //   html: otp(user.firstName, new_otp),
-    //   // text: `Your OTP is ${new_otp}. This is valid for 10 minutes.`,
-    //   attachments: []
-    // });
-
     mailService.sendEmail({
       to: user.email, // Correct field for the recipient's email
       from: "joeidelson@gmail.com", // Your verified sender email
@@ -222,15 +203,6 @@ exports.login = catchAsync(async (req, res, next) => {
     ); // Logs the result of bcrypt.compare
   }
 
-  // Check if the user exists and the password is correct
-  // if(!user || !user.password){
-  //   res.status(400).json({
-  //     status: "error",
-  //     message: "Incorrect password"
-  //   });
-  //   return;
-  // }
-
   console.log("Entered password (candidatePassword):", password);
   console.log("Stored hashed password (userPassword):", user.password);
   console.log(
@@ -247,14 +219,6 @@ exports.login = catchAsync(async (req, res, next) => {
 
   // Generate a token
   const token = signToken(user._id);
-
-  // if (!user || !(await user.correctPassword(password, user.password))) {
-  //   res.status(400).json({
-  //     status: "error",
-  //     message: "Email or password are incorrect",
-  //   });
-  //   return;
-  // }
 
   res.status(200).json({
     status: "success",
