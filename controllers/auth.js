@@ -27,17 +27,17 @@ exports.register = catchAsync(async (req, res, next) => {
     "password"
   );
 
-    // Hash the password before saving or updating
-    if (password) {
-      filteredBody.password = await bcrypt.hash(password, 12);
-    }
+  // Hash the password before saving or updating
+  if (password) {
+    filteredBody.password = await bcrypt.hash(password, 12);
+  }
 
-// Debug: Log plain password before hashing
-if (password) {
-  console.log("Plain password before hashing:", password); // Logs the plain password
-  filteredBody.password = await bcrypt.hash(password, 12);
-  console.log("Hashed password:", filteredBody.password); // Logs the hashed password
-}
+  // Debug: Log plain password before hashing
+  if (password) {
+    console.log("Plain password before hashing:", password); // Logs the plain password
+    filteredBody.password = await bcrypt.hash(password, 12);
+    console.log("Hashed password:", filteredBody.password); // Logs the hashed password
+  }
 
   // check if a verified user with given email exists
   const existing_user = await User.findOne({ email: email });
@@ -48,20 +48,20 @@ if (password) {
       message: "Email is already in use, please login.",
     });
   } else if (existing_user) {
-      // await User.findOneAndUpdate({ email: email }, filteredBody, { 
-      //   new: true, 
-      //   validateModifiedOnly: true 
-      // });
+    // await User.findOneAndUpdate({ email: email }, filteredBody, {
+    //   new: true,
+    //   validateModifiedOnly: true
+    // });
 
-       // Update the user if they already exist but are not verified
-      const updatedUser = await User.findOneAndUpdate(
-        { email: email },
-        filteredBody,
-        {
-          new: true,
-          validateModifiedOnly: true,
-        }
-      );
+    // Update the user if they already exist but are not verified
+    const updatedUser = await User.findOneAndUpdate(
+      { email: email },
+      filteredBody,
+      {
+        new: true,
+        validateModifiedOnly: true,
+      }
+    );
 
     // generate OTP and send email to user
     req.userId = existing_user._id;
@@ -86,11 +86,11 @@ exports.sendOTP = catchAsync(async (req, res, next) => {
 
   const otp_expiry_time = Date.now() + 10 * 60 * 1000; // 10 mins after OTP is sent
 
-//  const user = await User.findByIdAndUpdate(userId, {
-//     otp_expiry_time: otp_expiry_time
-//   });
+  //  const user = await User.findByIdAndUpdate(userId, {
+  //     otp_expiry_time: otp_expiry_time
+  //   });
 
-const user = await User.findById(userId);
+  const user = await User.findById(userId);
   if (!user) {
     return res.status(404).json({
       status: "error",
@@ -98,9 +98,7 @@ const user = await User.findById(userId);
     });
   }
   console.log("Fetched User:", user); // Logs the entire user object
-console.log("User email:", user?.email); // Specifically logs the email
-
-
+  console.log("User email:", user?.email); // Specifically logs the email
 
   user.otp = new_otp.toString();
 
@@ -110,43 +108,37 @@ console.log("User email:", user?.email); // Specifically logs the email
 
   console.log(`Generated OTP: ${new_otp}`);
 
-  try{
+  try {
+    // mailService.sendEmail({
+    //   from: "joeidelson@gmail.com", // CHANGE THIS EMAIL ADDRESS LATER ALSO IN mailer.js
+    //   // to: user.email,
+    //   recipient: user.email,
+    //   subject: "Verification OTP",
+    //   html: otp(user.firstName, new_otp),
+    //   // text: `Your OTP is ${new_otp}. This is valid for 10 minutes.`,
+    //   attachments: []
+    // });
 
+    mailService.sendEmail({
+      to: user.email, // Correct field for the recipient's email
+      from: "joeidelson@gmail.com", // Your verified sender email
+      subject: "Verification OTP",
+      html: otp(user.firstName, new_otp),
+      // text: `Your OTP is ${new_otp}. This is valid for 10 minutes.`,
+      attachments: [], // Optional: Only include this if needed
+    });
 
-  // mailService.sendEmail({
-  //   from: "joeidelson@gmail.com", // CHANGE THIS EMAIL ADDRESS LATER ALSO IN mailer.js
-  //   // to: user.email,
-  //   recipient: user.email,
-  //   subject: "Verification OTP",
-  //   html: otp(user.firstName, new_otp),
-  //   // text: `Your OTP is ${new_otp}. This is valid for 10 minutes.`,
-  //   attachments: []
-  // });
-
-
-  mailService.sendEmail({
-    to: user.email, // Correct field for the recipient's email
-    from: "joeidelson@gmail.com", // Your verified sender email
-    subject: "Verification OTP",
-    html: otp(user.firstName, new_otp),
-    // text: `Your OTP is ${new_otp}. This is valid for 10 minutes.`,
-    attachments: [], // Optional: Only include this if needed
-  });
-  
-
-  res.status(200).json({
-    status: "success",
-    message: "OTP Sent Successfully!",
-  });
-} catch (error) {
-  console.error("Error sending OTP email:", error.message);
-  res.status(500).json({
-    status: "error",
-    message: "Failed to send OTP email.",
-  });
-}
-
-  
+    res.status(200).json({
+      status: "success",
+      message: "OTP Sent Successfully!",
+    });
+  } catch (error) {
+    console.error("Error sending OTP email:", error.message);
+    res.status(500).json({
+      status: "error",
+      message: "Failed to send OTP email.",
+    });
+  }
 });
 
 exports.verifyOTP = catchAsync(async (req, res, next) => {
@@ -167,7 +159,7 @@ exports.verifyOTP = catchAsync(async (req, res, next) => {
   // Find user by email and check OTP expiry
   const user = await User.findOne({
     email,
-    otp_expiry_time: { $gt: Date.now() },// Ensure OTP is not expired
+    otp_expiry_time: { $gt: Date.now() }, // Ensure OTP is not expired
   });
 
   if (!user) {
@@ -177,13 +169,13 @@ exports.verifyOTP = catchAsync(async (req, res, next) => {
     });
   }
 
-  if(user.verified){
+  if (user.verified) {
     return res.status(400).json({
       status: "error",
-      message: "Email is already verified"
+      message: "Email is already verified",
     });
   }
-// Verify OTP
+  // Verify OTP
   if (!(await user.correctOTP(otp, user.otp))) {
     res.status(400).json({
       status: "error",
@@ -203,34 +195,34 @@ exports.verifyOTP = catchAsync(async (req, res, next) => {
     status: "success",
     message: "OTP verified successfully!",
     token,
-    user_id: user._id
+    user_id: user._id,
   });
 });
 
-  // User Login
+// User Login
 exports.login = catchAsync(async (req, res, next) => {
   const { email, password } = req.body;
 
   if (!email || !password) {
-   return res.status(400).json({
+    return res.status(400).json({
       status: "error",
       message: "Both email and password are required",
     });
   }
 
-   // Find the user by email and include the password
+  // Find the user by email and include the password
   const user = await User.findOne({ email }).select("+password");
 
-    // Debug: Check if the user was found and log the password comparison
-    console.log("User found:", user); // Logs the user object
-    if (user) {
-      console.log(
-        "Password comparison result:",
-        await user.correctPassword(password, user.password)
-      ); // Logs the result of bcrypt.compare
-    }
+  // Debug: Check if the user was found and log the password comparison
+  console.log("User found:", user); // Logs the user object
+  if (user) {
+    console.log(
+      "Password comparison result:",
+      await user.correctPassword(password, user.password)
+    ); // Logs the result of bcrypt.compare
+  }
 
-    // Check if the user exists and the password is correct
+  // Check if the user exists and the password is correct
   // if(!user || !user.password){
   //   res.status(400).json({
   //     status: "error",
@@ -240,9 +232,11 @@ exports.login = catchAsync(async (req, res, next) => {
   // }
 
   console.log("Entered password (candidatePassword):", password);
-console.log("Stored hashed password (userPassword):", user.password);
-console.log("Comparison result:", await bcrypt.compare(password, user.password));
-
+  console.log("Stored hashed password (userPassword):", user.password);
+  console.log(
+    "Comparison result:",
+    await bcrypt.compare(password, user.password)
+  );
 
   if (!user || !(await user.correctPassword(password, user.password))) {
     return res.status(400).json({
@@ -262,17 +256,15 @@ console.log("Comparison result:", await bcrypt.compare(password, user.password))
   //   return;
   // }
 
- 
-
   res.status(200).json({
     status: "success",
     message: "Logged in successfully",
     token,
-    user_id: user._id
+    user_id: user._id,
   });
 });
 
-exports.protect = catchAsync(async(req, res, next) => {
+exports.protect = catchAsync(async (req, res, next) => {
   // 1) Getting token (JWT) and check if it's there
 
   let token;
@@ -286,11 +278,11 @@ exports.protect = catchAsync(async(req, res, next) => {
     token = req.headers.authorization.split(" ")[1];
   } else if (req.cookies.jwt) {
     token = req.cookies.jwt;
-  } 
-  
-  if(!token){
+  }
+
+  if (!token) {
     return res.status(401).json({
-      message: "You are not logged in! Please log in to get access."
+      message: "You are not logged in! Please log in to get access.",
     });
   }
 
@@ -332,28 +324,26 @@ exports.forgotPassword = catchAsync(async (req, res, next) => {
 
   // 2) Generate the random reset token
   const resetToken = user.createPasswordResetToken();
-  await user.save({validateBeforeSave: false})
-
+  await user.save({ validateBeforeSave: false });
 
   try {
     const resetURL = `https://tawk.com/auth/reset-password/?code=${resetToken}`;
 
-    console.log(resetToken); 
+    console.log(resetToken);
 
     // TODO => Send Email With Reset URL
-  mailService.sendEmail({
-    from: "joeidelson@gmail.com",
-    to: user.email,
-    subject: "Reset Password",
-    html: resetPassword(user.firstName, resetURL),
-    attachments: []
-  });
+    mailService.sendEmail({
+      from: "joeidelson@gmail.com",
+      to: user.email,
+      subject: "Reset Password",
+      html: resetPassword(user.firstName, resetURL),
+      attachments: [],
+    });
 
- res.status(200).json({
+    res.status(200).json({
       status: "success",
       message: "Reset Password link sent to Email",
     });
-
   } catch (error) {
     user.passwordResetToken = undefined;
     user.passwordResetExpires = undefined;
@@ -385,7 +375,7 @@ exports.resetPassword = catchAsync(async (req, res, next) => {
   if (!user) {
     return res.status(400).json({
       status: "error",
-      message: "Token is invalid or expired",
+      // message: "Token is invalid or expired",
     });
   }
   user.password = req.body.password;
@@ -394,13 +384,13 @@ exports.resetPassword = catchAsync(async (req, res, next) => {
   user.passwordResetExpires = undefined;
   await user.save();
 
-    // 3) Update user password and set resetToken & expiry to undefined
+  // 3) Update user password and set resetToken & expiry to undefined
 
   // 4) Log in the user and send new JWT
 
   // TODO => send an email to user informing about password reset
 
-  const token = signTOken(user._id);
+  const token = signToken(user._id);
 
   res.status(200).json({
     status: "success",
