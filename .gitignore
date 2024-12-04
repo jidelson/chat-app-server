@@ -1,3 +1,4 @@
 /node_modules
 nodemon.json
 config.env
+hashPasswords.js
