@@ -191,32 +191,52 @@ exports.login = catchAsync(async (req, res, next) => {
   const { email, password } = req.body;
 
   if (!email || !password) {
-    res.status(400).json({
+   return res.status(400).json({
       status: "error",
       message: "Both email and password are required",
     });
-    return;
   }
 
-  const user = await User.findOne({ email: email }).select("+password");
+   // Find the user by email and include the password
+  const user = await User.findOne({ email }).select("+password");
 
-  if(!user || !user.password){
-    res.status(400).json({
-      status: "error",
-      message: "Incorrect password"
-    });
-    return;
-  }
+    // Debug: Check if the user was found and log the password comparison
+    console.log("User found:", user); // Logs the user object
+    if (user) {
+      console.log(
+        "Password comparison result:",
+        await user.correctPassword(password, user.password)
+      ); // Logs the result of bcrypt.compare
+    }
+
+    // Check if the user exists and the password is correct
+  // if(!user || !user.password){
+  //   res.status(400).json({
+  //     status: "error",
+  //     message: "Incorrect password"
+  //   });
+  //   return;
+  // }
 
   if (!user || !(await user.correctPassword(password, user.password))) {
-    res.status(400).json({
+    return res.status(400).json({
       status: "error",
       message: "Email or password are incorrect",
     });
-    return;
   }
 
+  // Generate a token
   const token = signToken(user._id);
+
+  // if (!user || !(await user.correctPassword(password, user.password))) {
+  //   res.status(400).json({
+  //     status: "error",
+  //     message: "Email or password are incorrect",
+  //   });
+  //   return;
+  // }
+
+ 
 
   res.status(200).json({
     status: "success",

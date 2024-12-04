@@ -86,12 +86,18 @@ userSchema.pre("save", async function (next) {
   next();
 });
 
-userSchema.methods.correctPassword = async function (
-  canditatePassword,
-  userPassword
-) {
-  return await bcrypt.compare(canditatePassword, userPassword);
+
+// userSchema.methods.correctPassword = async function (
+//   canditatePassword,
+//   userPassword
+// ) {
+//   return await bcrypt.compare(canditatePassword, userPassword);
+// };
+userSchema.methods.correctPassword = async function (candidatePassword, userPassword) {
+  return await bcrypt.compare(candidatePassword, userPassword);
 };
+
+
 
 // userSchema.methods.correctOTP = async function (canditateOTP, userOTP) {
 //   return await bcrypt.compare(canditateOTP, userOTP);
